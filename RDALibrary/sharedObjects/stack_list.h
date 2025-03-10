@@ -56,8 +56,31 @@ namespace RDA {
 	class stack_list {
 		stack_list() = default;
 
+		void addElement(stack_element& pEntity) {
+			stack_element* current = &_dummy;
+			while (current->_forward) {
+				if (current->_forward > pEntity) {
+					break;
+				}
+				current = current->_forward;
+			}
+			pEntity._forward = current->_forward;
+			if (current->_forward) {
+				current->_forward->_backward = &pEntity;
+			}
+			pEntity._backward = current;
+			current->_forward = &pEntity;
+		};
+		stack_element* getNext(stack_element* pointer) {
+			return pointer->_forward;
+		}
+
+		stack_element* getNext() {
+			return _dummy._forward;
+		}
+
 	protected:
-		stack_element _dummy;
+		meshEntity _dummy;
 	};
 
 }
