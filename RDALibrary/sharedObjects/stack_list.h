@@ -80,7 +80,7 @@ namespace RDA {
 		}
 
 	protected:
-		stack_element _dummy;
+		meshEntity _dummy;
 	};
 
 }
