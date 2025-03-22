@@ -4,6 +4,7 @@
 
 namespace RDA {
 	// Shared ptr alternative
+	// It's made to work together with the obj_ref, but i had changed some plans
 	// Need some tests and maybe some polish
 	template<typename T>
 	struct sh_obj {
