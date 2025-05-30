@@ -10,7 +10,6 @@ namespace RDA {
 	struct sh_all {
 		struct sha_header {
 			uint16_t counter;
-			std::mutex header_mutex; // Mutex to protect the header
 		};
 		sh_all() = default;
 		sh_all(size_t pSize) : _size(pSize) {
@@ -19,10 +18,8 @@ namespace RDA {
 				throw std::bad_alloc();
 			auto header = reinterpret_cast<sha_header*>(_all);
 			header->counter = 1;
-			new (&header->header_mutex) std::mutex(); // Placement new for the mutex
 		}
 		sh_all(const sh_all& other) {
-			std::lock_guard<std::mutex> lock(other.getHeader()->header_mutex);
 			this->_all = other._all;
 			this->_size = other._size;
 			if (_all) {
@@ -35,10 +32,8 @@ namespace RDA {
 				return;
 			}
 			auto header = getHeader();
-			std::lock_guard<std::mutex> lock(header->header_mutex);
 			header->counter--;
 			if (header->counter == 0) {
-				header->header_mutex.~mutex(); // Explicitly call the destructor for the mutex
 				free(_all);
 			}
 			_all = nullptr;
@@ -49,14 +44,9 @@ namespace RDA {
 
 			auto header = getHeader();
 			auto other_header = other.getHeader();
-			std::lock(header->header_mutex, other_header->header_mutex);
-			std::lock_guard<std::mutex> lock(header->header_mutex, std::adopt_lock);
-			std::lock_guard<std::mutex> other_lock(other_header->header_mutex, std::adopt_lock);
-
 			if (_all) {
 				header->counter--;
 				if (header->counter == 0) {
-					header->header_mutex.~mutex(); // Explicitly call the destructor for the mutex
 					free(_all);
 				}
 			}
