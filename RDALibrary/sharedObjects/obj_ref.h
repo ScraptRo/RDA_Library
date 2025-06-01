@@ -137,6 +137,8 @@ namespace RDA {
             return maintainAlive;
         }
         obj_list() = default;
+        // Initialize a pool with a predefined amount of data
+        // If it's requesting more items than space in the pool it will just make the basic allocation
         obj_list(size_t pSize) : _poolSize(pSize), _capacity(pSize) {
             _pool = reinterpret_cast<OBJ_POOL_UNION<T>*>(malloc(pSize * sizeof(OBJ_POOL_UNION<T>)));
             for (size_t i = 0; i < _poolSize - 1; i++){

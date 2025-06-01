@@ -3,84 +3,134 @@
 #include <iostream>
 
 namespace RDA {
-	// Not finished
-	// Its a meant to encapsulate a variable and give it a header that points to other elements in a chain
-	// Its meant to be "allocated on stack", or better said, to reduce the number of allocations, by attaching it to a variable
-	class stack_element {
-		stack_element* mForward = nullptr;
-		stack_element* mBackward = nullptr;
-	protected:
+	// This list makes that every struct can be added to a list and then iterate through it
+	// You can consider a disadvantage the fact that it's 'weakly typed'. By that i mean the fact that you can
+	// add a struct B to a list of struct A's
+
+	// Example:
+	//	struct SomeStruct {
+	//		RDA::stack_element mNode;
+	//		int someData = 0;
+	//	};
+	//	int main() {
+	//		RDA::stack_list anchor;
+	//		SomeStruct m1;
+	//		SomeStruct m2;
+	//		m2 = m1;
+	//		m1.someData = 1;
+	//		m2.someData = 2;
+	//		anchor.addNode(&m1.mNode);
+	//		anchor.addNode(&m2.mNode);
+	//		for (auto& el : anchor) {
+	//			std::cout << el.getBody<SomeStruct, &SomeStruct::mNode>()->someData << '\n';
+	//		}
+	//	}
+	struct stack_element {
+		stack_element* next = nullptr;
+		stack_element* prev = nullptr;
+
 		stack_element() = default;
-		~stack_element() = default;
 
-		void insert(stack_element& other) {
-			if (mForward) {
-				mForward->mBackward = mBackward;
+		stack_element(stack_element& other) {
+			if (other.next) {
+				other.next->prev = this;
 			}
-			if (mBackward) {
-				mBackward->mForward = mForward;
+			next = other.next;
+			other.next = this;
+			prev = &other;
+		}
+		~stack_element() {
+			if (next) {
+				next->prev = prev;
 			}
-			stack_element* helper = &other;
-			while (*helper < *this){
-				helper = helper->mForward;
+			if (prev) {
+				prev->next = next;
 			}
-			while (*helper > *this){
-				helper = helper->mBackward;
-			}
-			mForward = helper;
-			if (helper){
-				helper->mBackward = this;
-			}
-
+			next = nullptr;
+			prev = nullptr;
 		}
 
-		void pop() {
-			if (mForward){
-				mForward->mBackward = mBackward;
+		stack_element& operator=(stack_element& other) {
+			// Remove old reference
+			if (next) {
+				next->prev = prev;
 			}
-			if (mBackward){
-				mBackward->mForward = mForward;
+			if (prev) {
+				prev->next = next;
 			}
-			mForward = nullptr;
-			mBackward = nullptr;
+			// Insert in the new
+			if (other.next) {
+				other.next->prev = this;
+			}
+			next = other.next;
+			other.next = this;
+			prev = &other;
+			return *this;
 		}
 
-		friend bool operator==(stack_element& a, stack_element& b) { return &a == &b; };
-		friend bool operator!=(stack_element& a, stack_element& b) { return &a != &b; };
-		friend bool operator>=(stack_element& a, stack_element& b) { return &a >= &b; };
-		friend bool operator<=(stack_element& a, stack_element& b) { return &a <= &b; };
-		friend bool operator<(stack_element& a, stack_element& b) { return &a < &b; };
-		friend bool operator>(stack_element& a, stack_element& b) { return &a > &b; };
+		// Operator overloads for pointer equality
+		bool operator==(const stack_element& other) const {
+			return this == &other;
+		}
+		bool operator!=(const stack_element& other) const {
+			return this != &other;
+		}
+
+		template<typename T, stack_element T::* Member>
+		T* getBody() {
+			std::ptrdiff_t offset = reinterpret_cast<std::ptrdiff_t>(&(static_cast<T*>(nullptr)->*Member));
+			return reinterpret_cast<T*>(reinterpret_cast<char*>(this) - offset);
+		}
 	};
-	template<typename T>
-	class stack_list {
-		stack_list() = default;
 
-		void addElement(stack_element& pEntity) {
-			stack_element* current = &_dummy;
-			while (current->_forward) {
-				if (current->_forward > pEntity) {
-					break;
+	struct stack_list {
+		// Insert a node(or list)
+		void addNode(stack_element* node) {
+			if (!node) return;
+			if (dummy.next) {
+				dummy.next->prev = node;
+			}
+			node->next = dummy.next;
+			node->prev = &dummy;
+			dummy.next = node;
+		}
+
+		struct Iterator {
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type = std::ptrdiff_t;
+			using value_type = stack_element;
+			using pointer = stack_element*;
+			using reference = stack_element&;
+
+			Iterator(pointer ref) : m_ref(ref) {}
+
+			reference operator*() { return *m_ref; }
+			pointer operator->() { return m_ref; }
+
+			// Prefix increment
+			Iterator& operator++() {
+				if (m_ref) {
+					m_ref = m_ref->next;
 				}
-				current = current->_forward;
+				return *this;
 			}
-			pEntity._forward = current->_forward;
-			if (current->_forward) {
-				current->_forward->_backward = &pEntity;
+
+			// Postfix increment
+			Iterator operator++(int) {
+				Iterator tmp = *this; ++(*this); return tmp;
 			}
-			pEntity._backward = current;
-			current->_forward = &pEntity;
+
+			friend bool operator== (const Iterator& a, const Iterator& b) { return a.m_ref == b.m_ref; }
+			friend bool operator!= (const Iterator& a, const Iterator& b) { return a.m_ref != b.m_ref; }
+
+		private:
+			pointer m_ref;
 		};
-		stack_element* getNext(stack_element* pointer) {
-			return pointer->_forward;
-		}
+		Iterator begin() { return Iterator(dummy.next); }
+		Iterator end() { return Iterator(nullptr); }
 
-		stack_element* getNext() {
-			return _dummy._forward;
-		}
-
-	protected:
-		meshEntity _dummy;
+	private:
+		stack_element dummy;
 	};
 
 }
