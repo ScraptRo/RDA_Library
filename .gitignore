@@ -369,3 +369,4 @@ FodyWeavers.xsd
 /RDALibrary/RDALibrary.vcxproj.user
 /RDALibrary/RDALibrary.cpp
 /RDALibrary/RDALibrary.cpp
+/RDALibrary/testing.cpp
